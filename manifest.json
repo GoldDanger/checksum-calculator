@@ -1,16 +1,18 @@
 {
   "name": "Checksum Calculator",
   "short_name": "Checksum",
-  "start_url": "./index.html",
+  "description": "Fast & Private Web Processing",
+  "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#07070a",
-  "theme_color": "#07070a",
+  "background_color": "#0a0f0d",
+  "theme_color": "#0a0f0d",
   "icons": [
     {
       "src": "icon.png",
-      "sizes": "512x512",
+      "sizes": "791x791",
       "type": "image/png",
       "purpose": "any maskable"
     }
   ]
 }
+
