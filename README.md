@@ -1,5 +1,10 @@
+![Status](https://img.shields.io/badge/status-active-brightgreen)
+![License](https://img.shields.io/badge/license-MIT-blue)
+
 # Checksum Calculator 🛡️
 A fast, 100% private, client-side utility to generate and verify file checksums. Built to handle files securely without ever uploading your data to a server.
+
+Try It Instantly - https://golddanger.github.io/checksum-calculator/
 
 Built with 💚 by **@GoldDanger**
 
@@ -18,7 +23,7 @@ A lightweight Progressive Web App (PWA) that runs instantly in your browser.
 * **Features:** Installable to your home screen, automatic HTTPS clipboard support, and blazing fast processing.
 
 ### 2. The Offline Air-Gapped Edition
-A standalone HTML file with the entire 3,000-line crypto engine embedded directly inside.
+A standalone HTML file with the Self-contained crypto engine (fully offline, no dependencies) embedded directly inside.
 * **File:** `Checksum_Calculator_Offline.html`
 * **Features:** Bypasses CORS restrictions, works with zero internet, and is perfect for secure storage. Download it and open it in any browser while in Airplane mode.
 
