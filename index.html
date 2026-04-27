@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checksum Calculator</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    
+    <style>
+        :root {
+            --primary: #00ff88;
+            --glass: rgba(255, 255, 255, 0.12);
+            --glass-thick: rgba(255, 255, 255, 0.35); 
+            --bg-dark: #07070a;
+        }
+
+        body { 
+            font-family: system-ui, -apple-system, sans-serif; 
+            color: #ffffff; padding: 15px; max-width: 600px; margin: 0 auto; 
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(13, 43, 34, 0.8) 0px, transparent 50%),
+                radial-gradient(circle at 90% 80%, rgba(17, 26, 51, 0.8) 0px, transparent 50%);
+            background-attachment: fixed; overflow-x: hidden;
+        }
+        
+        .box, .progressBox, .status { 
+            background: rgba(30, 30, 35, 0.35); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.4); 
+            border-radius: 24px; margin-bottom: 15px; padding: 20px;
+        }
+
+        .header-container { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 5px 25px 5px; }
+
+        .tab-bar { 
+            position: relative; display: flex; background: rgba(0, 0, 0, 0.3); backdrop-filter: blur(15px);
+            border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.05); margin-bottom: 25px; padding: 6px; height: 55px; align-items: center;
+        }
+        .tab-slider {
+            position: absolute; top: 6px; bottom: 6px; left: 6px; width: calc(50% - 6px);
+            background: var(--glass-thick); border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); transition: transform 0.5s cubic-bezier(0.19, 1, 0.22, 1); z-index: 0;
+        }
+        .tab-bar.verify-active .tab-slider { transform: translateX(100%); }
+
+        .tab-btn { 
+            flex: 1; position: relative; z-index: 1; height: 100%; background: transparent; border: none; 
+            color: rgba(255,255,255,0.4); font-weight: 700; font-size: 1.05em; cursor: pointer; transition: color 0.4s ease; 
+        }
+        .tab-btn.active { color: var(--primary); }
+        
+        .page { display: none; opacity: 0; transform: translateY(10px); transition: all 0.4s ease; }
+        .page.active { display: block; opacity: 1; transform: translateY(0); }
+
+        select, input[type="file"], textarea { 
+            padding: 14px; background: rgba(0, 0, 0, 0.3); color: white; border: 1px solid rgba(255, 255, 255, 0.12); 
+            border-radius: 14px; width: 100%; box-sizing: border-box; display: block; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 8px;
+        }
+        select:active, input[type="file"]:active { transform: scale(0.97); background: rgba(0, 0, 0, 0.5); }
+        textarea { white-space: pre-wrap; font-family: 'JetBrains Mono', monospace; font-size: 0.85em; resize: vertical; min-height: 80px;}
+        textarea:focus { outline: 1px solid var(--primary); background: rgba(0,0,0,0.5); }
+
+        .action-btn {
+            background: var(--primary); color: #000; font-weight: 800; font-size: 1.05em; padding: 15px; 
+            border-radius: 14px; border: none; width: 100%; margin-top: 15px; cursor: pointer; transition: transform 0.2s, background 0.2s;
+        }
+        .action-btn:active { transform: scale(0.98); }
+        .stop-btn { background: #ff4444; color: white; display: none; }
+        .tool-btn { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); margin-top: 10px; font-size: 0.9em; padding: 12px;}
+
+        .hint { color: rgba(255,255,255,0.5); font-size: 0.85em; margin-top: 8px; margin-bottom: 12px; line-height: 1.5; }
+        .label-text { font-size: 0.95em; font-weight: 600; color: rgba(255,255,255,0.95); margin-bottom: 8px; display: block;}
+        .step-headline { font-size: 1.1em; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 12px; margin-bottom: 18px; display: block; font-weight: bold; }
+        .divider { text-align: center; color: rgba(255,255,255,0.2); font-weight: bold; margin: 22px 0; font-size: 0.8em; letter-spacing: 4px; }
+        
+        .progressBox { display: none; }
+        progress { width: 100%; height: 14px; margin-top: 12px; border-radius: 10px; overflow: hidden; appearance: none; }
+        progress::-webkit-progress-bar { background-color: rgba(0,0,0,0.4); }
+        progress::-webkit-progress-value { background-color: var(--primary); box-shadow: 0 0 15px var(--primary); }
+        .progressText { text-align: center; font-weight: 800; color: var(--primary); margin-top: 10px; font-size: 1.1em; }
+        
+        .status { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; white-space: pre-wrap; border: 1px solid rgba(255,255,255,0.05); overflow-x: auto; max-height: 300px; overflow-y: auto;}
+        .warning-box { background: rgba(255, 204, 0, 0.1); backdrop-filter: blur(10px); color: #ffcc00; padding: 18px; border-radius: 20px; border: 1px solid rgba(255, 204, 0, 0.25); font-size: 0.85em; line-height: 1.5; margin-top: 10px; }
+        
+        .match { color: #00ff88; text-shadow: 0 0 8px rgba(0,255,136,0.4);}
+        .mismatch { color: #ff4444; text-shadow: 0 0 8px rgba(255,68,68,0.4);}
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <div>
+            <h2 style="margin: 0; font-weight: 800; font-size: 1.45em; letter-spacing: -0.5px;">Checksum Calculator</h2>
+            <p style="color: rgba(255,255,255,0.4); font-size: 0.85em; margin: 2px 0 0 0;">Fast & Private Web Processing</p>
+        </div>
+        <div style="text-align: right; min-width: 120px;">
+            <span style="font-size: 0.75em; font-weight: 600; color: rgba(255,255,255,0.3); display: block;">Built with <span style="color: var(--primary);">💚</span> by</span>
+            <a href="https://github.com/GoldDanger" target="_blank" style="text-decoration: none;">
+                <span style="font-size: 0.9em; font-weight: 800; color: var(--primary); letter-spacing: 0.5px;">@GoldDanger</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="tab-bar" id="tabContainer">
+        <div class="tab-slider"></div>
+        <button id="btnCreate" class="tab-btn active" onclick="switchTab('create')">Create Checksum</button>
+        <button id="btnVerify" class="tab-btn" onclick="switchTab('verify')">Verify Checksum</button>
+    </div>
+
+    <div id="pageCreate" class="page active">
+        <div class="box">
+            <div style="display: flex; gap: 15px;">
+                <div style="flex: 1;">
+                    <label class="label-text">Algorithm</label>
+                    <select id="createAlgo">
+                        <option value="SHA256">SHA-256 (Recommended)</option>
+                        <option value="SHA512">SHA-512</option>
+                        <option value="SHA1">SHA-1</option>
+                        <option value="MD5">MD5 (Fast, Less Secure)</option>
+                    </select>
+                </div>
+                <div style="flex: 1;">
+                    <label class="label-text">Extension</label>
+                    <select id="createExt">
+                        <option value=".sha256">.sha256</option>
+                        <option value=".sha512">.sha512</option>
+                        <option value=".sha1">.sha1</option>
+                        <option value=".md5">.md5</option>
+                        <option value=".txt">.txt</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="box">
+            <label class="label-text" style="color: var(--primary);">Select Specific Files</label>
+            <input type="file" id="createFileInput" multiple style="border-left: 4px solid var(--primary);">
+            <div class="divider">— OR —</div>
+            <label class="label-text" style="color: var(--primary);">Select Whole Folder</label>
+            <p class="hint" style="color: #ffcc00; margin-top: -2px;">* Android blocks default folders. Move files to a custom folder first.</p>
+            <input type="file" id="createFolderInput" webkitdirectory directory multiple style="border-left: 4px solid var(--primary);">
+            
+            <button id="startCreateBtn" class="action-btn" onclick="startCreate()">Start Processing</button>
+            <button id="stopCreateBtn" class="action-btn stop-btn" onclick="stopProcess()">🛑 Stop Processing</button>
+        </div>
+
+        <div id="createProgressBox" class="progressBox">
+            <div id="createProgressLabel" style="color: rgba(255,255,255,0.6); font-weight: 600;">Calculating...</div>
+            <progress id="createProgressBar" value="0" max="100"></progress>
+            <div id="createProgressText" class="progressText">0%</div>
+        </div>
+        
+        <div id="createStatus" class="status">Waiting for files...</div>
+        <div id="createActions" style="display: none; margin-top: 15px;"></div>
+    </div>
+
+    <div id="pageVerify" class="page">
+        <div class="box">
+            <label class="step-headline">1. Provide Reference Checksums</label>
+            <p class="hint" style="margin-top: -5px;">Upload the reference file OR paste the copied text below.</p>
+            <input type="file" id="verifyHashFile" style="border-left: 4px solid #66ffff;">
+            <div class="divider">— OR PASTE —</div>
+            <textarea id="verifyPasteInput" placeholder="e.g., e3b0c442...855 video.mp4"></textarea>
+            <p class="hint" style="margin-top: 4px;">* Format must be: [Hash] [Space] [Filename]</p>
+            
+            <label class="label-text" style="margin-top: 20px;">Algorithm Used</label>
+            <select id="verifyAlgo">
+                <option value="SHA256">SHA-256</option>
+                <option value="SHA512">SHA-512</option>
+                <option value="SHA1">SHA-1</option>
+                <option value="MD5">MD5</option>
+            </select>
+        </div>
+
+        <div class="box">
+            <label class="step-headline">2. Select Data to Verify</label>
+            <label class="label-text" style="color: var(--primary);">Select Specific Files</label>
+            <input type="file" id="verifyFileInput" multiple style="border-left: 4px solid var(--primary); margin-bottom: 15px;">
+            <div class="divider">— OR —</div>
+            <label class="label-text" style="color: var(--primary);">Select Whole Folder</label>
+            <p class="hint" style="color: #ffcc00; margin-top: -2px;">Must match the folder structure of your original checksum file.</p>
+            <input type="file" id="verifyFolderInput" webkitdirectory directory multiple style="border-left: 4px solid var(--primary);">
+            
+            <button id="startVerifyBtn" class="action-btn" onclick="startVerify()">Start Verification</button>
+            <button id="stopVerifyBtn" class="action-btn stop-btn" onclick="stopProcess()">🛑 Stop Verification</button>
+        </div>
+
+        <div id="verifyProgressBox" class="progressBox">
+            <div id="verifyProgressLabel" style="color: rgba(255,255,255,0.6); font-weight: 600;">Verifying...</div>
+            <progress id="verifyProgressBar" value="0" max="100"></progress>
+            <div id="verifyProgressText" class="progressText">0%</div>
+        </div>
+        
+        <div id="verifyStatus" class="status">Waiting for reference data...</div>
+    </div>
+
+    <div class="warning-box">
+        <strong>⚠️ Keep Screen Awake:</strong> Mobile browsers freeze background tasks to save RAM. Do not minimize the browser while calculating.
+    </div>
+
+    <script>
+        let cancelProcess = false;
+
+        function switchTab(tab) {
+            const createPage = document.getElementById('pageCreate'), verifyPage = document.getElementById('pageVerify'), tabContainer = document.getElementById('tabContainer');
+            if(tab === 'create') {
+                tabContainer.classList.remove('verify-active'); verifyPage.classList.remove('active'); document.getElementById('btnVerify').classList.remove('active');
+                setTimeout(() => { verifyPage.style.display = 'none'; createPage.style.display = 'block'; setTimeout(() => { createPage.classList.add('active'); document.getElementById('btnCreate').classList.add('active'); }, 50); }, 300);
+            } else {
+                tabContainer.classList.add('verify-active'); createPage.classList.remove('active'); document.getElementById('btnCreate').classList.remove('active');
+                setTimeout(() => { createPage.style.display = 'none'; verifyPage.style.display = 'block'; setTimeout(() => { verifyPage.classList.add('active'); document.getElementById('btnVerify').classList.add('active'); }, 50); }, 300);
+            }
+        }
+
+        function stopProcess() { cancelProcess = true; }
+
+        const algos = { 'MD5': CryptoJS.algo.MD5, 'SHA1': CryptoJS.algo.SHA1, 'SHA256': CryptoJS.algo.SHA256, 'SHA512': CryptoJS.algo.SHA512 };
+
+        async function calculateHash(file, algoName, progressBar, progressText) {
+            return new Promise((resolve, reject) => {
+                const chunkSize = 10 * 1024 * 1024; 
+                const algo = algos[algoName.replace(/ \(.+\)/, '')].create(); 
+                let offset = 0;
+                function readNextChunk() {
+                    if (cancelProcess) return reject("Cancelled");
+                    const slice = file.slice(offset, offset + chunkSize); const reader = new FileReader();
+                    reader.onload = function(e) {
+                        algo.update(CryptoJS.lib.WordArray.create(e.target.result)); offset += chunkSize;
+                        let percent = Math.min(100, Math.round((offset / file.size) * 100));
+                        progressBar.value = percent; progressText.innerText = percent + '%';
+                        if (offset < file.size) readNextChunk(); else resolve(algo.finalize().toString()); 
+                    };
+                    reader.onerror = reject; reader.readAsArrayBuffer(slice);
+                }
+                readNextChunk();
+            });
+        }
+
+        async function startCreate() {
+            const filesList = document.getElementById('createFolderInput').files.length > 0 ? document.getElementById('createFolderInput').files : document.getElementById('createFileInput').files;
+            const isFolderMode = document.getElementById('createFolderInput').files.length > 0;
+            if (filesList.length === 0) return alert("Select files or a folder first!");
+
+            cancelProcess = false;
+            document.getElementById('startCreateBtn').style.display = 'none';
+            document.getElementById('stopCreateBtn').style.display = 'block';
+            document.getElementById('createActions').style.display = 'none';
+            document.getElementById('createActions').innerHTML = '';
+            
+            const algoName = document.getElementById('createAlgo').value;
+            const algoNameRaw = document.getElementById('createAlgo').options[document.getElementById('createAlgo').selectedIndex].text;
+            const fileExt = document.getElementById('createExt').value;
+            const statusDiv = document.getElementById('createStatus'), progressBox = document.getElementById('createProgressBox');
+            
+            statusDiv.innerHTML = `Scanning ${filesList.length} files with ${algoNameRaw}...\n\n`; progressBox.style.display = 'block';
+            let checksumData = "";
+            let processedCount = 0;
+
+            for (const file of filesList) {
+                if (cancelProcess) { statusDiv.innerHTML += `\n[STOPPED BY USER]\n`; break; }
+                try {
+                    statusDiv.innerHTML += `Reading ${file.name}... `; document.getElementById('createProgressLabel').innerText = `Hashing: ${file.name}`;
+                    const hashHex = await calculateHash(file, algoName, document.getElementById('createProgressBar'), document.getElementById('createProgressText'));
+                    const finalPath = isFolderMode ? (file.webkitRelativePath || file.name) : file.name;
+                    checksumData += `${hashHex}  ${finalPath}\n`; statusDiv.innerHTML += `[SUCCESS]\n`;
+                    processedCount++;
+                } catch (err) { statusDiv.innerHTML += `[${err === "Cancelled" ? "STOPPED" : "ERROR"}]\n`; }
+            }
+            
+            progressBox.style.display = 'none';
+            document.getElementById('startCreateBtn').style.display = 'block';
+            document.getElementById('stopCreateBtn').style.display = 'none';
+
+            if (!cancelProcess && processedCount > 0) {
+                statusDiv.innerHTML += `\n=========================\n✔ Total Files: ${processedCount}\n✔ Algorithm: ${algoNameRaw}\n✔ Status: Completed\n=========================`;
+                
+                const actionsDiv = document.getElementById('createActions');
+                actionsDiv.style.display = 'block';
+
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'action-btn tool-btn';
+                copyBtn.innerText = "📋 Copy Checksums to Clipboard";
+                copyBtn.onclick = () => {
+                    const fallbackCopy = (text) => {
+                        const textArea = document.createElement("textarea");
+                        textArea.value = text;
+                        textArea.style.position = "fixed";
+                        document.body.appendChild(textArea);
+                        textArea.focus();
+                        textArea.select();
+                        try {
+                            document.execCommand('copy');
+                            copyBtn.innerText = "✅ Copied!";
+                            setTimeout(() => copyBtn.innerText = "📋 Copy Checksums to Clipboard", 2000);
+                        } catch (err) {
+                            alert("Copy failed. Your browser completely blocks local clipboard access.");
+                        }
+                        document.body.removeChild(textArea);
+                    };
+
+                    if (navigator.clipboard && window.isSecureContext) {
+                        navigator.clipboard.writeText(checksumData).then(() => {
+                            copyBtn.innerText = "✅ Copied!";
+                            setTimeout(() => copyBtn.innerText = "📋 Copy Checksums to Clipboard", 2000);
+                        }).catch(() => fallbackCopy(checksumData));
+                    } else {
+                        fallbackCopy(checksumData);
+                    }
+                };
+                actionsDiv.appendChild(copyBtn);
+
+                const downloadBtn = document.createElement('button');
+                downloadBtn.className = 'action-btn tool-btn';
+                downloadBtn.style.background = 'var(--primary)';
+                downloadBtn.style.color = '#000';
+                downloadBtn.innerText = "💾 Save Checksum File";
+                downloadBtn.onclick = () => {
+                    const blob = new Blob([checksumData], { type: 'application/octet-stream' }); 
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a'); a.href = url; a.download = `checksums${fileExt}`;
+                    document.body.appendChild(a); 
+                    a.click();
+                    document.body.removeChild(a); 
+                    URL.revokeObjectURL(url);
+                };
+                actionsDiv.appendChild(downloadBtn);
+            }
+        }
+
+        // VERIFY ENGINE
+        let answerKey = {}; 
+        let fileLoadedKey = {}; // Store uploaded file data separate from pasted data
+
+        document.getElementById('verifyHashFile').addEventListener('change', (event) => {
+            const file = event.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result; const lines = text.split('\n'); fileLoadedKey = {}; 
+                lines.forEach(line => {
+                    const trimmed = line.trim();
+                    if(trimmed.length > 0) {
+                        const firstSpace = trimmed.indexOf(' ');
+                        if(firstSpace !== -1) {
+                            const hash = trimmed.substring(0, firstSpace).trim();
+                            const filename = trimmed.substring(firstSpace).trim();
+                            fileLoadedKey[filename] = hash.toLowerCase();
+                        }
+                    }
+                });
+                document.getElementById('verifyStatus').innerHTML = `Loaded file with ${Object.keys(fileLoadedKey).length} entries.\nReady to Start.`;
+            };
+            reader.readAsText(file);
+        });
+
+        async function startVerify() {
+            const filesList = document.getElementById('verifyFolderInput').files.length > 0 ? document.getElementById('verifyFolderInput').files : document.getElementById('verifyFileInput').files;
+            const isFolderMode = document.getElementById('verifyFolderInput').files.length > 0;
+            
+            if (filesList.length === 0) return alert("Select data to verify first!");
+
+            // Combine File upload and Pasted text into the answerKey
+            answerKey = { ...fileLoadedKey }; 
+            const pastedText = document.getElementById('verifyPasteInput').value;
+            if (pastedText.trim().length > 0) {
+                const lines = pastedText.split('\n');
+                lines.forEach(line => {
+                    const trimmed = line.trim();
+                    if(trimmed.length > 0) {
+                        const firstSpace = trimmed.indexOf(' ');
+                        if(firstSpace !== -1) {
+                            const hash = trimmed.substring(0, firstSpace).trim();
+                            const filename = trimmed.substring(firstSpace).trim();
+                            answerKey[filename] = hash.toLowerCase();
+                        }
+                    }
+                });
+            }
+
+            if (Object.keys(answerKey).length === 0) return alert("Please upload a Reference File OR paste checksums!");
+
+            cancelProcess = false;
+            document.getElementById('startVerifyBtn').style.display = 'none';
+            document.getElementById('stopVerifyBtn').style.display = 'block';
+
+            const algoName = document.getElementById('verifyAlgo').value;
+            const statusDiv = document.getElementById('verifyStatus'), progressBox = document.getElementById('verifyProgressBox');
+            statusDiv.innerHTML = `Verifying ${filesList.length} files against ${Object.keys(answerKey).length} reference hashes...\n\n`; 
+            progressBox.style.display = 'block';
+            let matches = 0, mismatches = 0;
+
+            for (const file of filesList) {
+                if (cancelProcess) { statusDiv.innerHTML += `\n[STOPPED BY USER]\n`; break; }
+                try {
+                    const finalPath = isFolderMode ? (file.webkitRelativePath || file.name) : file.name;
+                    if (!answerKey[finalPath]) { statusDiv.innerHTML += `${finalPath} -> <span style="color: #888;">[IGNORED]</span>\n`; continue; }
+                    
+                    document.getElementById('verifyProgressLabel').innerText = `Verifying: ${file.name}`;
+                    const expectedHash = answerKey[finalPath];
+                    const calculatedHash = await calculateHash(file, algoName, document.getElementById('verifyProgressBar'), document.getElementById('verifyProgressText'));
+                    
+                    if (calculatedHash.toLowerCase() === expectedHash) {
+                        statusDiv.innerHTML += `${finalPath} -> <span class="match">[MATCH] 🟢</span>\n`; matches++;
+                    } else {
+                        statusDiv.innerHTML += `${finalPath} -> <span class="mismatch">[MISMATCH] 🔴</span>\n`; mismatches++;
+                    }
+                } catch (err) { statusDiv.innerHTML += `${file.name} -> <span class="mismatch">[${err === "Cancelled" ? "STOPPED" : "ERROR"}]</span>\n`; }
+            }
+            
+            progressBox.style.display = 'none';
+            document.getElementById('startVerifyBtn').style.display = 'block';
+            document.getElementById('stopVerifyBtn').style.display = 'none';
+            if(!cancelProcess) {
+                statusDiv.innerHTML += `\n=========================\nVerification Complete!\n✔ Matches: ${matches}\n❌ Mismatches: ${mismatches}\n=========================`;
+            }
+        }
+    </script>
+</body>
+</html>
+
