@@ -37,3 +37,13 @@ A standalone HTML file with the Self-contained crypto engine (fully offline, no 
 * **SHA-512**
 * **SHA-1**
 * **MD5** (For legacy verification)
+
+## 🛡️ Security & Trust
+Because this is a standalone Progressive Web App (PWA) and not a commercial app from the Google Play Store, Android may show a "Play Protect" or "Older Version" warning during installation.
+
+**Why this happens:**
+* **No Tracking:** This app is 100% private and does not contain the tracking/telemetry code Google uses to "verify" apps.
+* **WebAPK Generation:** Android re-wraps the code into a local "WebAPK" every time you install it, which can trigger generic system warnings.
+* **Open Source:** The best security is transparency. You can audit every line of code in `index.html` and `sw.js` right here in the repository to see that your data never leaves your device.
+
+**Verdict:** If prompted, it is safe to select "Install anyway" or "Scan app." Once scanned, Play Protect will confirm the app is clean.
