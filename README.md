@@ -2,7 +2,7 @@
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
 # Checksum Calculator 🛡️
-A fast, 100% private, client-side utility to generate and verify file checksums. Built to handle files securely without ever uploading your data to a server.
+A fast, 100% private, client-side utility to generate and verify file checksums. All processing happens locally — your files never leave your device.
 
 Try It Instantly - https://golddanger.github.io/checksum-calculator/
 
