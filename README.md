@@ -7,7 +7,7 @@ Built with 💚 by **@GoldDanger**
 
 ### 1. The Web App (Recommended)
 A lightweight Progressive Web App (PWA) that runs instantly in your browser. 
-* **Live Link:** [Link will go here soon]
+* **Live Link:** [https://golddanger.github.io/checksum-calculator/] 
 * **Features:** Installable to your home screen, automatic HTTPS clipboard support, and blazing fast CDN routing.
 
 ### 2. The Offline Air-Gapped Edition
