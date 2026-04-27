@@ -2,6 +2,7 @@
   "name": "Checksum Calculator",
   "short_name": "Checksum",
   "description": "Fast & Private Web Processing",
+  "id": "/checksum-calculator/",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#0a0f0d",
